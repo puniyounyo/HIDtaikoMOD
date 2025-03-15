@@ -31,7 +31,7 @@
 - Pro Microのデジタルピン8 (LOWで決定) に接続されたボタンを押すと、次の設定項目に移動します。最後の項目で決定ボタンを押すと設定モードが終了し、現在の設定値がPro MicroのEEPROMに保存され、通常モードに戻ります。
 
 ## 回路図
- Pro Micro
+ -Pro Micro
 
            +-----------+
     (A0) --| 14        |--> アナログセンサー (右)
@@ -51,7 +51,7 @@
      VCC --| VCC       | (通常 5V)
            +-----------+
 
- OLED (I2C接続)
+ -OLED (I2C接続)
 
  Pro Micro GND -- OLED GND
  Pro Micro VCC -- OLED VCC
@@ -61,11 +61,13 @@
 ## 使用方法
 
 1. Arduino IDEにこのスケッチをコピー＆ペーストします。
-2. 必要なライブラリ（SPI, Wire, Adafruit GFX Library, Adafruit SSD1306, EEPROM, NintendoSwitchControlLibrary, Keyboard）がインストールされていることを確認してください。インストールされていない場合は、ライブラリマネージャーからインストールしてください。
-3. Pro Microボードに適切な配線でアナログセンサー、デジタル入力ボタン、OLEDディスプレイを接続してください。**Pro Microのピン配置を再度確認し、スケッチのピン定義と一致させてください。特にI2CのSDA/SCLピンはArduino Unoと異なる場合があるので注意が必要です。**
-4. Pro MicroをPCに接続し、スケッチを書き込みます。
-5. 起動時にPro Microのデジタルピン15の接続状態によってPCモードまたはSWモードで動作します。
-6. PCモード中に設定を変更したい場合は、Pro Microのデジタルピン14に接続されたボタンを押して設定モードに移行し、OLEDの指示に従って設定値を変更してください。
+2. 必要なライブラリ（SPI, Wire, Adafruit GFX Library, Adafruit SSD1306, EEPROM, NintendoSwitchControlLibrary, Keyboard）がインストールされていることを確認してください。
+3. インストールされていない場合は、ライブラリマネージャーからインストールしてください。
+4. Pro Microボードに適切な配線でアナログセンサー、デジタル入力ボタン、OLEDディスプレイを接続してください。
+5. **Pro Microのピン配置を再度確認し、スケッチのピン定義と一致させてください。特にI2CのSDA/SCLピンはArduino Unoと異なる場合があるので注意が必要です。**
+6. Pro MicroをPCに接続し、スケッチを書き込みます。
+7. 起動時にPro Microのデジタルピン15の接続状態によってPCモードまたはSWモードで動作します。
+8. PCモード中に設定を変更したい場合は、Pro Microのデジタルピン14に接続されたボタンを押して設定モードに移行し、OLEDの指示に従って設定値を変更してください。
 
 ## 設定
 

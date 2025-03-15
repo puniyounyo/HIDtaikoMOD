@@ -360,20 +360,15 @@ void displayValue() {                      // 数値部分のみを表示する�
   display.display();                      // OLED画面を更新
 }
 
-void checkButtons() {                      // ボタンの状態を確認し、設定モードを切り替える関数
-  if (digitalRead(14) == LOW && !swswitching) { // 設定モード切り替えボタンが押され、かつSWモードでない場合
+void checkButtons() { // ボタンの状態を確認する
+  if (digitalRead(14) == LOW && !swswitching && !settingMode) { // 設定モード切り替えボタンが押され、かつSWモードでなく、現在設定モードでない場合
     Serial.println("設定モードを有効化します。"); // シリアルモニタに表示
-    settingMode = !settingMode;           // 設定モードの状態を反転（true <-> false）
-    if (settingMode) {                     // 設定モードが有効になった場合
-      currentSetting = 0;                 // 現在の設定項目を最初に戻す
-      displaySettings();                  // 設定画面を表示する
-    } else {                             // 設定モードが無効になった場合
-      saveSettings();                     // 現在の設定値をEEPROMに保存する
-      displayMode();                      // 通常モードの表示に戻す
-      Serial.println("設定モードを終了します。");
-    }
+    settingMode = true;                     // 設定モードをtrueにする
+    currentSetting = 0;                     // 設定項目を最初に戻す
+    displaySettings();                      // 設定画面を表示する
     delay(debounceDelay);                 // チャタリング防止のための遅延
   }
+  // 設定モード中は、14番ピンの入力はここでは処理しない
 }
 
 void displayMode() {                      // 現在の動作モードをOLEDに表示する関数

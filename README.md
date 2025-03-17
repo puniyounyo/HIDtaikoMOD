@@ -1,4 +1,4 @@
-# HIDtaiko ver.1.2.5 (Pro Micro)
+# HIDtaikoMOD ver.1.2.5 (Pro Micro)
 
 ## 概要
 

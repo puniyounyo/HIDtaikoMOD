@@ -34,7 +34,7 @@ Pro Microをベースとしており、以下の kasasiki3 氏の HIDtaiko プ�
 ## 回路図
  -Pro Micro
 
-## ピン配置
+
 
 ## ピン配置
 

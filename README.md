@@ -1,4 +1,4 @@
-# HIDtaiko ver.1.2.4 (Pro Micro)
+# HIDtaiko ver.1.2.5 (Pro Micro)
 
 ## 概要
 
@@ -13,6 +13,14 @@ Pro Microをベースとしており、以下の kasasiki3 氏の HIDtaiko プ�
 
 **オリジナルのアイデア:** [kasasiki3](https://github.com/kasasiki3) さん
 
+*更新履歴
+ オリジナル版 1.2
+ MOD版 1.2.1　ボツ
+ MOD版 1.2.2　キーボードを離すまでの遅延処理追加（オリジナルver1.3相当)
+ MOD版 1.2.3　EEPROMによる設定変更導入　スイッチモードNG
+ MOD版 1.2.4　一旦完成
+ MOD版 1.2.5　WS2812B LEDによる動作モード表示 
+ 
 ## 動作
 
 ### 通常モード (PC/SWモード)

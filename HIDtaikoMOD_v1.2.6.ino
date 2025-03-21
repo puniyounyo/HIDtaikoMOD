@@ -16,7 +16,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET); // Ada
 #define LED_COUNT 1    // 使用する LED の数
 Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800); // Adafruit_NeoPixelクラスのオブジェクトpixelsを作成（LED制御用）
 
-const int numSettings = 11; // 設定項目の数を11と定義
+const int numSettings = 12; // 設定項目の数を11と定義
 int settings[numSettings]; // 設定値を格納する整数型配列settingsを定義（要素数11）
 int currentSetting = 0;   // 現在選択されている設定項目のインデックスを0で初期化
 bool settingMode = false; // 設定モードの状態を表すブール型変数settingModeをfalse（通常モード）で初期化
@@ -25,8 +25,8 @@ bool swswitching = false; // SWモードの状態を表すブール型変数swsw
 unsigned long lastDebounceTime = 0; // 最後にボタンが押された時間を保存する変数
 unsigned long debounceDelay = 50;  // ボタンのチャタリング防止のための遅延時間を50ミリ秒と定義
 
-String settingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD"}; // 設定項目の名前を格納する文字列型配列
-// LRD: 左右同時入力遅延, CRD: 中央左右同時入力遅延
+String settingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD", "DHT"}; // 設定項目の名前を格納する文字列型配列
+// LRD: 左右同時入力遅延, CRD: 中央左右同時入力遅延 , HDT: 大判定の許容範囲
 String modeNames[3] = {"PC MODE", "SW MODE", "SET MODE"}; // 動作モードの名前を格納する文字列型配列（SET MODEを追加）
 
 int de = 220;         // デジタル入力の遅延時間を220ミリ秒と定義
@@ -174,7 +174,7 @@ void loop() {
 
     if (swswitching == false) { // PCモードの場合
       // 同時入力の検出と処理 (遅延時間を個別設定)
-      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && time - ti > settings[6]) { // 左右同時入力
+      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {  // 左右同時入力
         Serial.println("大カッ!");
         Keyboard.press(left);
         Keyboard.press(right);
@@ -200,7 +200,7 @@ void loop() {
         ti0 = millis();        // 最後にA0が反応した時間を更新
         ti = millis();         // 最後に何らかの入力があった時間を更新
       }
-      if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && time - ti > settings[6]) { // 中央左右同時入力
+      if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) { // 中央左右同時入力
         Serial.println("大ドン!");
         Keyboard.press(middletight);
         Keyboard.press(middleleft);
@@ -253,7 +253,7 @@ void loop() {
 
     } else { // SWモードの場合
       // 同時入力の検出と処理 (遅延時間を個別設定)
-      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && time - ti > swB) { // 左右同時入力
+      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {  // 左右同時入力
         Serial.println("大カッ!");
         SwitchControlLibrary().pressButton(Button::ZL);
         SwitchControlLibrary().pressButton(Button::ZR);
@@ -287,7 +287,7 @@ void loop() {
         ti0 = millis();                                    // 最後にA0が反応した時間を更新
         ti = millis();                                     // 最後に何らかの入力があった時間を更新
       }
-     if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && time - ti > swB) { // 中央左右同時入力
+     if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) { // 中央左右同時入力
         Serial.println("大ドン!");
         SwitchControlLibrary().pressButton(Button::RCLICK);
         SwitchControlLibrary().pressButton(Button::LCLICK);

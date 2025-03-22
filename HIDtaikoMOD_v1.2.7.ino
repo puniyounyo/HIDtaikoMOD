@@ -19,7 +19,6 @@ Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 const int numSettings = 12;
 int settings[numSettings];
 String settingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD", "DHT"};
-String defaultSettingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD", "DHT"};
 
 int currentSetting = 0;
 bool settingMode = false;
@@ -59,8 +58,6 @@ long int timec = 0;
 long int ti = 0;
 
 uint32_t currentLedColor = 0;
-
-const int settingNamesBaseAddress = 100;
 
 void setup() {
   pinMode(4, INPUT_PULLUP);
@@ -112,7 +109,6 @@ void setup() {
   pixels.show();
 
   loadSettings();
-  loadSettingNames();
   displayMode();
 
   if (swswitching == true) {
@@ -125,7 +121,7 @@ void setup() {
       delay(100);
     }
   }
-  Serial.println("EEPROM Writer with Get/Set Settings Integrated.");
+  Serial.println("EEPROM Writer for Settings Integrated.");
 }
 
 void loop() {
@@ -177,32 +173,203 @@ void loop() {
         Serial.println(settings[i]);
       }
       Serial.println("--- End Settings ---");
-    } else if (command.startsWith("setname:")) {
-      String data = command.substring(8);
-      int commaIndex = data.indexOf(',');
-      if (commaIndex != -1) {
-        String indexStr = data.substring(0, commaIndex);
-        String newName = data.substring(commaIndex + 1);
-        int index = indexStr.toInt();
-        if (index >= 0 && index < numSettings) {
-          settingNames[index] = newName;
-          Serial.print("Setting name at index ");
-          Serial.print(index);
-          Serial.print(" updated to: ");
-          Serial.println(newName);
-          saveSettingNames(); // 設定名をEEPROMに保存
-          if (settingMode && currentSetting == index) {
-            displaySettings(); // 設定モードなら表示を更新
-          } else if (!settingMode) {
-            displayMode(); // 通常モードならモード表示を更新（設定名が変わったことを反映）
-          }
-          Serial.println("OK:NAME_UPDATED");
-        } else {
-          Serial.println("Error: Invalid setting index.");
-          Serial.println("ERROR:INVALID_INDEX");
-        }
+    } else if (command == "readall") {
+      Serial.println("--- EEPROM Contents ---");
+      for (int i = 0; i < EEPROM.length(); i++) {
+        Serial.print(i);
+        Serial.print(": ");
+        Serial.println(EEPROM.read(i));
+        delay(10);
       }
-ti2 = millis();
+      Serial.println("--- End of EEPROM ---");
+    }
+  }
+
+  if (settingMode) {
+    if (digitalRead(6) == LOW) {
+      settings[currentSetting]--;
+      Serial.println("Up Button Pressed");
+      delay(debounceDelay);
+      if (settings[currentSetting] < 0) {
+        settings[currentSetting] = 100;
+      }
+      displayValue();
+      delay(100);
+    }
+    if (digitalRead(7) == LOW) {
+      settings[currentSetting]++;
+      Serial.println("Down Button Pressed");
+      delay(debounceDelay);
+      if (settings[currentSetting] > 100) {
+        settings[currentSetting] = 0;
+      }
+      displayValue();
+      delay(100);
+    }
+    if (digitalRead(8) == LOW) {
+      currentSetting++;
+      Serial.println("OK Button Pressed");
+      delay(debounceDelay);
+      if (currentSetting >= numSettings) {
+        currentSetting = 0;
+        settingMode = false;
+        saveSettings();
+        displayMode();
+        Serial.println("設定モードを終了します。");
+      } else {
+        displaySettings();
+      }
+      delay(200);
+    }
+  } else {
+    long int a3 = analogRead(A3pin);
+    long int a0 = analogRead(A0pin);
+    long int a1 = analogRead(A1pin);
+    long int a2 = analogRead(A2pin);
+    time = millis();
+
+    if (swswitching == false) {
+      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {
+        Serial.println("大カッ!");
+        Keyboard.press(left);
+        Keyboard.press(right);
+        delay(settings[9]);
+        Keyboard.release(left);
+        Keyboard.release(right);
+        ti = millis();
+      }
+      if (a3 - sv3 >= settings[3] && time - ti3 > settings[4] && time - ti > settings[6]) {
+        Serial.println("左カッ!");
+        Keyboard.press(left);
+        delay(settings[8]);
+        Keyboard.release(left);
+        ti3 = millis();
+        ti = millis();
+      }
+      if (a0 - sv0 >= settings[0] && time - ti0 > settings[4] && time - ti > settings[6]) {
+        Serial.println("右カッ!");
+        Keyboard.press(right);
+        delay(settings[8]);
+        Keyboard.release(right);
+        ti0 = millis();
+        ti = millis();
+      }
+      if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) {
+        Serial.println("大ドン!");
+        Keyboard.press(middletight);
+        Keyboard.press(middleleft);
+        delay(settings[10]);
+        Keyboard.release(middletight);
+        Keyboard.release(middleleft);
+        ti = millis();
+      }
+      if (a1 - sv1 >= settings[1] && time - ti1 > settings[4] && time - ti > settings[5] && time - ti0 > settings[7] && time - ti3 > settings[7]) {
+        Serial.println("右ドン!");
+        Keyboard.press(middletight);
+        delay(settings[8]);
+        Keyboard.release(middletight);
+        ti1 = millis();
+        ti = millis();
+      }
+      if (a2 - sv2 >= settings[2] && time - ti2 > settings[4] && time - ti > settings[5] && time - ti0 > settings[7] && time - ti3 > settings[7]) {
+        Serial.println("左ドン!");
+        Keyboard.press(middleleft);
+        delay(settings[8]);
+        Keyboard.release(middleleft);
+        ti2 = millis();
+        ti = millis();
+      }
+      if (digitalRead(4) == LOW) {
+        Keyboard.write(KEY_UP_ARROW);
+        delay(de);
+      }
+      if (digitalRead(5) == LOW) {
+        Keyboard.write(KEY_RETURN);
+        delay(de);
+      }
+      if (digitalRead(6) == LOW) {
+        Keyboard.write(KEY_F1);
+        delay(de);
+      }
+      if (digitalRead(7) == LOW) {
+        Keyboard.write(KEY_INSERT);
+        delay(de);
+      }
+      if (digitalRead(8) == LOW) {
+        Keyboard.write(KEY_ESC);
+        delay(de);
+      }
+      if (digitalRead(9) == LOW) {
+        Keyboard.write(KEY_DOWN_ARROW);
+        delay(de);
+      }
+    } else {
+      if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {
+        Serial.println("大カッ!");
+        SwitchControlLibrary().pressButton(Button::ZL);
+        SwitchControlLibrary().pressButton(Button::ZR);
+        SwitchControlLibrary().sendReport();
+        delay(settings[9]);
+        SwitchControlLibrary().releaseButton(Button::ZL);
+        SwitchControlLibrary().releaseButton(Button::ZR);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti = millis();
+      }
+      if (a3 - sv3 >= settings[3] && time - ti3 > swA && time - ti > swB) {
+        Serial.println("左カッ!");
+        SwitchControlLibrary().pressButton(Button::ZL);
+        SwitchControlLibrary().sendReport();
+        delay(cc);
+        SwitchControlLibrary().releaseButton(Button::ZL);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti3 = millis();
+        ti = millis();
+      }
+      if (a0 - sv0 >= settings[0] && time - ti0 > swA && time - ti > swB) {
+        Serial.println("右カッ!");
+        SwitchControlLibrary().pressButton(Button::ZR);
+        SwitchControlLibrary().sendReport();
+        delay(cc);
+        SwitchControlLibrary().releaseButton(Button::ZR);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti0 = millis();
+        ti = millis();
+      }
+      if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) {
+        Serial.println("大ドン!");
+        SwitchControlLibrary().pressButton(Button::RCLICK);
+        SwitchControlLibrary().pressButton(Button::LCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(settings[10]);
+        SwitchControlLibrary().releaseButton(Button::RCLICK);
+        SwitchControlLibrary().releaseButton(Button::LCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti = millis();
+      }
+      if (a1 - sv1 >= settings[1] && time - ti1 > swA && time - ti > swB) {
+        Serial.println("右ドン!");
+        SwitchControlLibrary().pressButton(Button::RCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(cc);
+        SwitchControlLibrary().releaseButton(Button::RCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti1 = millis();
+        ti = millis();
+      }
+      if (a2 - sv2 >= settings[2] && time - ti2 > swA && time - ti > swB) {
+        Serial.println("左ドン!");
+        SwitchControlLibrary().pressButton(Button::LCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(cc);
+        SwitchControlLibrary().releaseButton(Button::LCLICK);
+        SwitchControlLibrary().sendReport();
+        delay(aa);
+        ti2 = millis();
         ti = millis();
       }
       if (digitalRead(4) == LOW) {
@@ -247,7 +414,7 @@ ti2 = millis();
       }
       if (digitalRead(9) == LOW) {
         SwitchControlLibrary().pressButton(Button::DOWN);
-        SwitchControlLibrary().sendReport();
+SwitchControlLibrary().sendReport();
         delay(de);
         SwitchControlLibrary().releaseButton(Button::DOWN);
         SwitchControlLibrary().sendReport();
@@ -367,61 +534,4 @@ void updateLedColor() {
     pixels.show();
     currentLedColor = newColor;
   }
-}
-
-// EEPROM から設定名をロードする関数
-void loadSettingNames() {
-  Serial.println("Loading Setting Names from EEPROM...");
-  for (int i = 0; i < numSettings; i++) {
-    int address = settingNamesBaseAddress + i * 32; // 各設定名に32バイト割り当て
-    String name = "";
-    for (int j = 0; j < 31; j++) { // 最大31文字 + null終端
-      char c = EEPROM.read(address + j);
-      if (c == 0) break; // null終端で終了
-      name += c;
-    }
-    if (name.length() > 0) {
-      settingNames[i] = name;
-      Serial.print("Loaded name for index ");
-      Serial.print(i);
-      Serial.print(": ");
-      Serial.println(settingNames[i]);
-    } else {
-      settingNames[i] = defaultSettingNames[i]; // EEPROMに保存されていなければデフォルト値を使用
-      Serial.print("No custom name found for index ");
-      Serial.print(i);
-      Serial.print(", using default: ");
-      Serial.println(settingNames[i]);
-    }
-  }
-}
-
-// 設定名を EEPROM に保存する関数
-void saveSettingNames() {
-  Serial.println("Saving Setting Names to EEPROM...");
-  for (int i = 0; i < numSettings; i++) {
-    int address = settingNamesBaseAddress + i * 32;
-    const char* name = settingNames[i].c_str();
-    for (int j = 0; j < 31; j++) {
-      if (name[j] == 0) {
-        EEPROM.write(address + j, 0); // null終端を書き込む
-        break;
-      }
-      EEPROM.write(address + j, name[j]);
-    }
-    Serial.print("Saved name for index ");
-    Serial.print(i);
-    Serial.print(": ");
-    Serial.println(settingNames[i]);
-  }
-  Serial.println("Setting Names saved to EEPROM.");
-}
-
-// デフォルトの設定名をロードする関数
-void loadDefaultSettingNames() {
-  for (int i = 0; i < numSettings; i++) {
-    settingNames[i] = defaultSettingNames[i];
-  }
-  Serial.println("Default setting names loaded.");
-}
 }

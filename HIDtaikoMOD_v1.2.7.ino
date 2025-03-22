@@ -6,6 +6,7 @@
 #include <EEPROM.h>           // EEPROMライブラリ（マイコン内蔵の不揮発性メモリへの読み書き）
 #include <NintendoSwitchControlLibrary.h> // Nintendo Switch制御ライブラリ（Nintendo Switchへの入力送信）
 #include <Keyboard.h>         // キーボード制御ライブラリ（PCへのキーボード入力送信）
+#include <ArduinoJson.h>
 
 #define SCREEN_WIDTH 128   // OLED画面の幅を128ピクセルと定義
 #define SCREEN_HEIGHT 64  // OLED画面の高さを64ピクセルと定義
@@ -18,8 +19,6 @@ Adafruit_NeoPixel pixels(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800); // Adafruit_
 
 const int numSettings = 12; // 設定項目の数を11と定義
 int settings[numSettings]; // 設定値を格納する整数型配列settingsを定義（要素数11）
-String settingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD", "DHT"}; // 設定項目の名前を格納する文字列型配列
-// LRD: 左右同時入力遅延, CRD: 中央左右同時入力遅延 , HDT: 大判定の許容範囲
 int currentSetting = 0;   // 現在選択されている設定項目のインデックスを0で初期化
 bool settingMode = false; // 設定モードの状態を表すブール型変数settingModeをfalse（通常モード）で初期化
 bool swswitching = false; // SWモードの状態を表すブール型変数swswitchingをfalse（PCモード）で初期化
@@ -27,6 +26,8 @@ bool swswitching = false; // SWモードの状態を表すブール型変数swsw
 unsigned long lastDebounceTime = 0; // 最後にボタンが押された時間を保存する変数
 unsigned long debounceDelay = 50;  // ボタンのチャタリング防止のための遅延時間を50ミリ秒と定義
 
+String settingNames[numSettings] = {"SE0", "SE1", "SE2", "SE3", "PA ", "PB ", "PC ", "PD ", "PE ", "LRD", "CRD", "DHT"}; // 設定項目の名前を格納する文字列型配列
+// LRD: 左右同時入力遅延, CRD: 中央左右同時入力遅延 , HDT: 大判定の許容範囲
 String modeNames[3] = {"PC MODE", "SW MODE", "SET MODE"}; // 動作モードの名前を格納する文字列型配列（SET MODEを追加）
 
 int de = 220;         // デジタル入力の遅延時間を220ミリ秒と定義
@@ -45,28 +46,17 @@ char cc = 20;  // Switchモードの遅延時間を20と定義
 char swA = 1;  // Switchモードの遅延時間を1と定義
 char swB = 3;  // Switchモードの遅延時間を3と定義
 
-//long int sv1 = 0;  // アナログ入力ピンA1の以前の値を保存する変数
-//long int sv2 = 0;  // アナログ入力ピンA2の以前の値を保存する変数
-//long int sv3 = 0;  // アナログ入力ピンA3の以前の値を保存する変数
-//long int sv0 = 0;  // アナログ入力ピンA0の以前の値を保存する変数
-//long int ti1 = 0;  // アナログ入力ピンA1のタイマー
-//long int ti2 = 0;  // アナログ入力ピンA2のタイマー
-//long int ti3 = 0;  // アナログ入力ピンA3のタイマー
-//long int ti0 = 0;  // アナログ入力ピンA0のタイマー
-//long int time = 0; // 現在の時間を保存する変数
-//long int timec = 0; // 汎用タイマー変数
-//long int ti = 0;   // 汎用タイマー変数
-int sv1 = 0;   // アナログ入力ピンA1の以前の値を保存する変数
-int sv2 = 0;   // アナログ入力ピンA2の以前の値を保存する変数
-int sv3 = 0;   // アナログ入力ピンA3の以前の値を保存する変数
-int sv0 = 0;   // アナログ入力ピンA0の以前の値を保存する変数
-int ti1 = 0;   // アナログ入力ピンA1のタイマー
-int ti2 = 0;   // アナログ入力ピンA2のタイマー
-int ti3 = 0;   // アナログ入力ピンA3のタイマー
-int ti0 = 0;   // アナログ入力ピンA0のタイマー
-int time = 0;  // 現在の時間を保存する変数
-int timec = 0; // 汎用タイマー変数
-int ti = 0;   // 汎用タイマー変数
+long int sv1 = 0;  // アナログ入力ピンA1の以前の値を保存する変数
+long int sv2 = 0;  // アナログ入力ピンA2の以前の値を保存する変数
+long int sv3 = 0;  // アナログ入力ピンA3の以前の値を保存する変数
+long int sv0 = 0;  // アナログ入力ピンA0の以前の値を保存する変数
+long int ti1 = 0;  // アナログ入力ピンA1のタイマー
+long int ti2 = 0;  // アナログ入力ピンA2のタイマー
+long int ti3 = 0;  // アナログ入力ピンA3のタイマー
+long int ti0 = 0;  // アナログ入力ピンA0のタイマー
+long int time = 0; // 現在の時間を保存する変数
+long int timec = 0; // 汎用タイマー変数
+long int ti = 0;   // 汎用タイマー変数
 
 uint32_t currentLedColor = 0; // LED の状態を保持する変数
 
@@ -87,9 +77,11 @@ void setup() {
     SwitchControlLibrary();     // Nintendo Switch制御ライブラリを初期化
   }
 
-  delay(1000);              // 起動時に1000ミリ秒（1秒）の遅延
-  Serial.begin(115200);      // シリアル通信をボーレート115200で開始
+  delay(2000);              // 起動時に2000ミリ秒（2秒）の遅延
+  Serial.begin(9600);      // シリアル通信をボーレート9600で開始
   Serial.println("Starting..."); // シリアルモニタに"Starting..."と表示
+
+  loadSettings();
 
   // OLED 初期化
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // OLEDディスプレイを初期化（電源供給方式とI2Cアドレスを指定）
@@ -110,22 +102,21 @@ void setup() {
     delay(de);                                    // デジタル入力遅延時間だけ待つ
     currentLedColor = pixels.Color(0, 255, 0);    // 初期色を緑に設定
   } else {
-    Serial.println("PCモードを有効化します。");     // シリアルモニタに表示
+   Serial.println("PCモードを有効化します。");     // シリアルモニタに表示
     delay(de);                                    // デジタル入力遅延時間だけ待つ
     currentLedColor = pixels.Color(0, 0, 255);     // 初期色を青に設定
   }
 
   // 起動時アニメーション：赤、青、緑 (高速切り替えループ、合計約2秒)
-  //blinkyLoop(200, 1000); // delayTime (ms), totalDuration (ms)
-  //delay(2000);           // 2000ミリ秒（2秒）の遅延
+  blinkyLoop(200, 1000); // delayTime (ms), totalDuration (ms)
+  delay(2000);           // 2000ミリ秒（2秒）の遅延
 
-pixels.fill(currentLedColor); // 起動時の初期色を点灯
+  pixels.fill(currentLedColor); // 起動時の初期色を点灯
   pixels.show();
 
   loadSettings(); // EEPROMから保存されている設定値を読み込む関数を呼び出す
   displayMode();  // 現在の動作モードをOLEDに表示する関数を呼び出す
 
-  /*
   if (swswitching == true) { // SWモードが有効の場合
     for (int i = 0; i < 6; i++) { // Lボタンを6回押す処理を繰り返す
       SwitchControlLibrary().pressButton(Button::LCLICK); // Nintendo SwitchのLスティッククリックボタンを押す
@@ -136,8 +127,6 @@ pixels.fill(currentLedColor); // 起動時の初期色を点灯
       delay(100);                                         // 100ミリ秒の遅延
     }
   }
-  */
-  Serial.println("EEPROM Writer for Settings Integrated.");
 }
 
 void loop() {
@@ -145,62 +134,14 @@ void loop() {
   updateLedColor(); // モードが変わった場合のみ LED を更新
 
   if (Serial.available()) {
-    String command = Serial.readStringUntil('\n');
-    command.trim();
-    Serial.print("Received command (WebSerial): ");
-    Serial.println(command);
-
-    if (command.startsWith("write:")) {
-      String data = command.substring(6);
-      int colonIndex = data.indexOf(':');
-      if (colonIndex != -1) {
-        String addressStr = data.substring(0, colonIndex);
-        String valueStr = data.substring(colonIndex + 1);
-
-        int address = addressStr.toInt();
-        int value = valueStr.toInt();
-
-        if (address >= 0 && address < numSettings) { // アドレスの範囲を numSettings に修正
-          settings[address] = value; // settings配列を直接更新
-          EEPROM.write(address, value); // EEPROM に保存
-          Serial.print("Wrote value ");
-          Serial.print(value);
-          Serial.print(" to setting ");
-          Serial.println(settingNames[address]);
-          Serial.println("OK:SETTING_UPDATED");
-          if (!settingMode) {
-            displayValue();
-          }
-        } else {
-          Serial.println("Error: Invalid setting index.");
-          Serial.println("ERROR:INVALID_INDEX");
-        }
-      } else {
-        Serial.println("Error: Invalid write command format (index:value).");
-        Serial.println("ERROR:WRITE_FORMAT");
-      }
-    } else if (command == "getsettings") {
-      Serial.println("--- Settings ---");
-      for (int i = 0; i < numSettings; i++) {
-        Serial.print(i);
-        Serial.print(":");
-        Serial.print(settingNames[i]);
-        Serial.print(":");
-        Serial.println(settings[i]);
-      }
-      Serial.println("--- End Settings ---");
-    } else if (command == "readall") {
-      Serial.println("--- EEPROM Contents ---");
-      for (int i = 0; i < EEPROM.length(); i++) {
-        Serial.print(i);
-        Serial.print(": ");
-        Serial.println(EEPROM.read(i));
-        delay(10);
-      }
-      Serial.println("--- End of EEPROM ---");
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    if (input == "GET") {
+      sendSettings();
+    } else {
+      updateSettings(input);
     }
-  }
-
+  
   if (settingMode) { // 設定モードがtrueの場合
     if (digitalRead(6) == LOW) { // デジタル入力ピン6がLOWの場合（数値減少ボタンが押された場合）
       settings[currentSetting]--; // 現在選択されている設定項目の値を1減らす
@@ -247,7 +188,7 @@ void loop() {
     if (swswitching == false) { // PCモードの場合
       // 同時入力の検出と処理 (遅延時間を個別設定)
       if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {  // 左右同時入力
-        //Serial.println("大カッ!");
+        Serial.println("大カッ!");
         Keyboard.press(left);
         Keyboard.press(right);
         delay(settings[9]); // 左右同時入力遅延 (settings[9]を使用)
@@ -257,7 +198,7 @@ void loop() {
       }
 
       if (a3 - sv3 >= settings[3] && time - ti3 > settings[4] && time - ti > settings[6]) { // アナログ入力A3の変化が閾値を超え、かつ一定時間経過した場合
-        //Serial.println("左カッ!");
+        Serial.println("左カッ!");
         Keyboard.press(left);  // キーボードの左ボタンを押す
         delay(settings[8]);   // 設定された遅延時間待つ
         Keyboard.release(left); // キーボードの左ボタンを離す
@@ -265,7 +206,7 @@ void loop() {
         ti = millis();         // 最後に何らかの入力があった時間を更新
       }
       if (a0 - sv0 >= settings[0] && time - ti0 > settings[4] && time - ti > settings[6]) { // アナログ入力A0の変化が閾値を超え、かつ一定時間経過した場合
-        //Serial.println("右カッ!");
+        Serial.println("右カッ!");
         Keyboard.press(right); // キーボードの右ボタンを押す
         delay(settings[8]);   // 設定された遅延時間待つ
         Keyboard.release(right); // キーボードの右ボタンを離す
@@ -273,7 +214,7 @@ void loop() {
         ti = millis();         // 最後に何らかの入力があった時間を更新
       }
       if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) { // 中央左右同時入力
-        //Serial.println("大ドン!");
+        Serial.println("大ドン!");
         Keyboard.press(middletight);
         Keyboard.press(middleleft);
         delay(settings[10]); // 中央左右同時入力遅延 (settings[10]を使用)
@@ -282,7 +223,7 @@ void loop() {
         ti = millis();
       }
       if (a1 - sv1 >= settings[1] && time - ti1 > settings[4] && time - ti > settings[5] && time - ti0 > settings[7] && time - ti3 > settings[7]) { // アナログ入力A1の変化が閾値を超え、かつ複数の条件を満たす場合
-        //Serial.println("右ドン!");
+        Serial.println("右ドン!");
         Keyboard.press(middletight); // キーボードの中央右ボタンを押す
         delay(settings[8]);        // 設定された遅延時間待つ
         Keyboard.release(middletight); // キーボードの中央右ボタンを離す
@@ -290,42 +231,43 @@ void loop() {
         ti = millis();             // 最後に何らかの入力があった時間を更新
       }
       if (a2 - sv2 >= settings[2] && time - ti2 > settings[4] && time - ti > settings[5] && time - ti0 > settings[7] && time - ti3 > settings[7]) { // アナログ入力A2の変化が閾値を超え、かつ複数の条件を満たす場合
-        //Serial.println("左ドン!");
+        Serial.println("左ドン!");
         Keyboard.press(middleleft); // キーボードの中央左ボタンを押す
         delay(settings[8]);        // 設定された遅延時間待つ
         Keyboard.release(middleleft); // キーボードの中央左ボタンを離す
         ti2 = millis();            // 最後にA2が反応した時間を更新
         ti = millis();             // 最後に何らかの入力があった時間を更新
       }
-    // デジタル入力ピンの番号を格納する配列
-    int digitalPins[] = {4, 5, 6, 7, 8, 9};
-
-    // 各デジタルピンに対応して送信するキーボードキーの値を格納する配列
-    // KEY_UP_ARROW, KEY_RETURN, KEY_F1, KEY_INSERT, KEY_ESC, KEY_DOWN_ARROW は Keyboard ライブラリで定義されています
-    byte keysToSend[] = {KEY_UP_ARROW, KEY_RETURN, KEY_F1, KEY_INSERT, KEY_ESC, KEY_DOWN_ARROW};
-
-    // チェックするボタン（デジタルピン）の数
-    int numButtons = 6;
-
-    // 各ボタンの状態を順番にチェックするループ
-    for (int i = 0; i < numButtons; i++) {
-      // digitalPins 配列の i 番目のピンの状態を読み取る
-      // LOW であれば（通常、プッシュプル抵抗で HIGH になっており、押されると LOW になるスイッチを想定）
-      if (digitalRead(digitalPins[i]) == LOW) {
-        // 対応するキーボードキーを送信する
-        // keysToSend 配列の i 番目のキーコードを Keyboard.write() で送信
-        Keyboard.write(keysToSend[i]);
-
-        // キー送信後の遅延時間 (de はスケッチの先頭で定義されているデジタル入力遅延時間)
-        delay(de);
+      if (digitalRead(4) == LOW) { // デジタル入力ピン4がLOWの場合
+        Keyboard.write(KEY_UP_ARROW); // キーボードの上矢印キーを送信
+        delay(de);                   // デジタル入力遅延時間だけ待つ
       }
-    }
+      if (digitalRead(5) == LOW) { // デジタル入力ピン5がLOWの場合
+        Keyboard.write(KEY_RETURN); // キーボードのリターンキーを送信
+        delay(de);                  // デジタル入力遅延時間だけ待つ
+      }
+      if (digitalRead(6) == LOW) { // デジタル入力ピン6がLOWの場合
+        Keyboard.write(KEY_F1);     // キーボードのF1キーを送信
+        delay(de);                  // デジタル入力遅延時間だけ待つ
+      }
+      if (digitalRead(7) == LOW) { // デジタル入力ピン7がLOWの場合
+        Keyboard.write(KEY_INSERT); // キーボードのINSERTキーを送信
+        delay(de);                  // デジタル入力遅延時間だけ待つ
+      }
+      if (digitalRead(8) == LOW) { // デジタル入力ピン8がLOWの場合
+        Keyboard.write(KEY_ESC);  // キーボードのESCキーを送信
+        delay(de);                 // デジタル入力遅延時間だけ待つ
+      }
+      if (digitalRead(9) == LOW) { // デジタル入力ピン9がLOWの場合
+        Keyboard.write(KEY_DOWN_ARROW); // キーボードの下矢印キーを送信
+        delay(de);                     // デジタル入力遅延時間だけ待つ
+      }
 
 
     } else { // SWモードの場合
       // 同時入力の検出と処理 (遅延時間を個別設定)
       if (a3 - sv3 >= settings[3] && a0 - sv0 >= settings[0] && abs(ti3 - ti0) <= settings[11]) {  // 左右同時入力
-        //Serial.println("大カッ!");
+        Serial.println("大カッ!");
         SwitchControlLibrary().pressButton(Button::ZL);
         SwitchControlLibrary().pressButton(Button::ZR);
         SwitchControlLibrary().sendReport();
@@ -337,7 +279,7 @@ void loop() {
         ti = millis();
       }
       if (a3 - sv3 >= settings[3] && time - ti3 > swA && time - ti > swB) { // アナログ入力A3の変化が閾値を超え、かつSwitchモードの遅延時間を満たす場合
-        //Serial.println("左カッ!");
+        Serial.println("左カッ!");
         SwitchControlLibrary().pressButton(Button::ZL); // SwitchのZLボタンを押す
         SwitchControlLibrary().sendReport();                 // 押したボタンの状態を送信
         delay(cc);                                         // Switchモードの遅延時間待つ
@@ -348,7 +290,7 @@ void loop() {
         ti = millis();                                     // 最後に何らかの入力があった時間を更新
       }
       if (a0 - sv0 >= settings[0] && time - ti0 > swA && time - ti > swB) { // アナログ入力A0の変化が閾値を超え、かつSwitchモードの遅延時間を満たす場合
-        //Serial.println("右カッ!");
+        Serial.println("右カッ!");
         SwitchControlLibrary().pressButton(Button::ZR); // SwitchのZRボタンを押す
         SwitchControlLibrary().sendReport();                 // 押したボタンの状態を送信
         delay(cc);                                         // Switchモードの遅延時間待つ
@@ -359,7 +301,7 @@ void loop() {
         ti = millis();                                     // 最後に何らかの入力があった時間を更新
       }
      if (a1 - sv1 >= settings[1] && a2 - sv2 >= settings[2] && abs(ti1 - ti2) <= settings[11]) { // 中央左右同時入力
-        //Serial.println("大ドン!");
+        Serial.println("大ドン!");
         SwitchControlLibrary().pressButton(Button::RCLICK);
         SwitchControlLibrary().pressButton(Button::LCLICK);
         SwitchControlLibrary().sendReport();
@@ -371,7 +313,7 @@ void loop() {
         ti = millis();
       }
       if (a1 - sv1 >= settings[1] && time - ti1 > swA && time - ti > swB) { // アナログ入力A1の変化が閾値を超え、かつSwitchモードの遅延時間を満たす場合
-        //Serial.println("右ドン!");
+        Serial.println("右ドン!");
         SwitchControlLibrary().pressButton(Button::RCLICK); // SwitchのRスティッククリックボタンを押す
         SwitchControlLibrary().sendReport();                 // 押したボタンの状態を送信
         delay(cc);                                         // Switchモードの遅延時間待つ
@@ -382,7 +324,7 @@ void loop() {
         ti = millis();                                     // 最後に何らかの入力があった時間を更新
       }
       if (a2 - sv2 >= settings[2] && time - ti2 > swA && time - ti > swB) { // アナログ入力A2の変化が閾値を超え、かつSwitchモードの遅延時間を満たす場合
-        //Serial.println("左ドン!");
+        Serial.println("左ドン!");
         SwitchControlLibrary().pressButton(Button::LCLICK); // SwitchのLスティッククリックボタンを押す
         SwitchControlLibrary().sendReport();                 // 押したボタンの状態を送信
         delay(cc);                                         // Switchモードの遅延時間待つ
@@ -448,7 +390,11 @@ void loop() {
         SwitchControlLibrary().sendReport();                 // 離したボタンの状態を送信
         delay(de);                                         // デジタル入力遅延時間だけ待つ
       }
+
+
+ 
     }
+
     sv3 = a3; // 現在のA3アナログ入力値を以前の値として保存
     sv0 = a0; // 現在のA0アナログ入力値を以前の値として保存
     sv1 = a1; // 現在のA1アナログ入力値を以前の値として保存
@@ -536,21 +482,21 @@ void displayMode() { // 現在の動作モードをOLEDに表示する関数
 void blinkyLoop(int delayTime, unsigned long totalDuration) { // LED点滅アニメーション関数
   unsigned long startTime = millis();
   while (millis() - startTime < totalDuration) { // 指定時間内ループ
-    //pixels.setPixelColor(0, pixels.Color(255, 0, 0)); // LED0を赤色に設定
-    //pixels.setPixelColor(1, pixels.Color(255, 0, 0)); // LED1を赤色に設定
-    //pixels.show(); // LED表示
-    //delay(delayTime); // 指定時間待ち
-    //pixels.setPixelColor(0, pixels.Color(0, 0, 255)); // LED0を青色に設定
-    //pixels.setPixelColor(1, pixels.Color(0, 0, 255)); // LED1を青色に設定
-    //pixels.show(); // LED表示
-    //delay(delayTime); // 指定時間待ち
-    //pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // LED0を緑色に設定
-    //pixels.setPixelColor(1, pixels.Color(0, 255, 0)); // LED1を緑色に設定
-    //pixels.show(); // LED表示
-    //delay(delayTime); // 指定時間待ち
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0)); // LED0を赤色に設定
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0)); // LED1を赤色に設定
+    pixels.show(); // LED表示
+    delay(delayTime); // 指定時間待ち
+    pixels.setPixelColor(0, pixels.Color(0, 0, 255)); // LED0を青色に設定
+    pixels.setPixelColor(1, pixels.Color(0, 0, 255)); // LED1を青色に設定
+    pixels.show(); // LED表示
+    delay(delayTime); // 指定時間待ち
+    pixels.setPixelColor(0, pixels.Color(0, 255, 0)); // LED0を緑色に設定
+    pixels.setPixelColor(1, pixels.Color(0, 255, 0)); // LED1を緑色に設定
+    pixels.show(); // LED表示
+    delay(delayTime); // 指定時間待ち
   }
   pixels.setPixelColor(0, pixels.Color(0, 0, 0)); // LED0を消灯
-  //pixels.setPixelColor(1, pixels.Color(0, 0, 0)); // LED1を消灯
+  pixels.setPixelColor(1, pixels.Color(0, 0, 0)); // LED1を消灯
   pixels.show(); // LED表示
 }
 
@@ -569,4 +515,44 @@ void updateLedColor() { // LEDの色を更新する関数
     pixels.show(); // LED表示
     currentLedColor = newColor; // 現在の色を更新
   }
+}
+
+void loadSettings() {
+  for (int i = 0; i < numSettings; i++) {
+    settings[i] = EEPROM.read(i);
+  }
+}
+
+void saveSettings() {
+  for (int i = 0; i < numSettings; i++) {
+    EEPROM.write(i, settings[i]);
+  }
+  EEPROM.commit();
+}
+
+void sendSettings() {
+  StaticJsonDocument<256> doc;
+  for (int i = 0; i < numSettings; i++) {
+    doc[settingNames[i]] = settings[i];
+  }
+  String json;
+  serializeJson(doc, json);
+  Serial.println(json);
+}
+
+void updateSettings(String jsonInput) {
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, jsonInput);
+  if (error) {
+    Serial.println("JSON Error");
+    return;
+  }
+
+  for (int i = 0; i < numSettings; i++) {
+    if (doc.containsKey(settingNames[i])) {
+      settings[i] = doc[settingNames[i]];
+    }
+  }
+  saveSettings();
+  Serial.println("OK");
 }

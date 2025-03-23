@@ -88,7 +88,7 @@ void setup() {
   display.setCursor(0, 20);    // カーソルの開始位置を(0, 20)に設定
   display.println("HIDtaiko"); // OLEDに"HIDtaiko"という文字列を表示
   display.setCursor(0, 40);    // カーソルの開始位置を(0, 40)に設定
-  display.println("ver.1.2.6"); // OLEDに"ver.1.2.6"という文字列を表示
+  display.println("ver.1.2.6a"); // OLEDに"ver.1.2.6"という文字列を表示
   display.display();          // OLED画面に設定した内容を実際に表示
 
   pixels.begin(); // ネオピクセルLEDの初期化
@@ -131,34 +131,48 @@ void loop() {
   updateLedColor(); // モードが変わった場合のみ LED を更新
   if (settingMode) { // 設定モードがtrueの場合
     if (digitalRead(6) == LOW) { // デジタル入力ピン6がLOWの場合（数値減少ボタンが押された場合）
-      settings[currentSetting]--; // 現在選択されている設定項目の値を1減らす
-      Serial.println("Up Button Pressed"); // シリアルモニタに"Up Button Pressed"と表示
-      delay(debounceDelay);                // チャタリング防止のための遅延
-      if (settings[currentSetting] < 0) { // 設定値が0未満になった場合
-        settings[currentSetting] = 100;    // 設定値を100にリセット
+      if (currentSetting == 11) { // DHTの設定項目の場合
+        settings[currentSetting] -= 16;
+        if (settings[currentSetting] < 0) {
+          settings[currentSetting] = 0; // 下限値を0に設定
+        }
+      } else {
+        settings[currentSetting]--; // 現在選択されている設定項目の値を1減らす
+        if (settings[currentSetting] < 0) { // 設定値が0未満になった場合
+          settings[currentSetting] = 100; // 設定値を100にリセット
+        }
       }
-      displayValue(); // 現在の設定値をOLEDに表示する関数を呼び出す
-      delay(100);     // 100ミリ秒の遅延
+      Serial.println("Up Button Pressed"); // シリアルモニタに"Up Button Pressed"と表示
+      delay(debounceDelay);            // チャタリング防止のための遅延
+      displayValue();                  // 現在の設定値をOLEDに表示する関数を呼び出す
+      delay(100);                      // 100ミリ秒の遅延
     }
     if (digitalRead(7) == LOW) { // デジタル入力ピン7がLOWの場合（数値増加ボタンが押された場合）
-      settings[currentSetting]++; // 現在選択されている設定項目の値を1増やす
-      Serial.println("Down Button Pressed"); // シリアルモニタに"Down Button Pressed"と表示
-      delay(debounceDelay);                 // チャタリング防止のための遅延
-      if (settings[currentSetting] > 100) { // 設定値が100を超えた場合
-        settings[currentSetting] = 0;     // 設定値を0にリセット
+     if (currentSetting == 11) { // DHTの設定項目の場合
+        settings[currentSetting] += 16d;
+        if (settings[currentSetting] > 4096) {
+          settings[currentSetting] = 4096; // 上限値を4096に設定
+        }
+      } else {
+        settings[currentSetting]++;
+        if (settings[currentSetting] > 100) { // 他の設定は0-100の範囲
+          settings[currentSetting] = 0;
+        }
       }
-      displayValue(); // 現在の設定値をOLEDに表示する関数を呼び出す
-      delay(100);     // 100ミリ秒の遅延
+      Serial.println("Down Button Pressed"); // シリアルモニタに"Down Button Pressed"と表示
+      delay(debounceDelay);              // チャタリング防止のための遅延
+      displayValue();                    // 現在の設定値をOLEDに表示する関数を呼び出す
+      delay(100);                        // 100ミリ秒の遅延
     }
     if (digitalRead(8) == LOW) { // デジタル入力ピン8がLOWの場合（決定ボタンが押された場合）
-      currentSetting++;          // 現在選択されている設定項目のインデックスを1増やす
+      currentSetting++;           // 現在選択されている設定項目のインデックスを1増やす
       Serial.println("OK Button Pressed");
       delay(debounceDelay);
       if (currentSetting >= numSettings) { // 全ての設定項目を巡回した場合
-        currentSetting = 0;               // 設定項目のインデックスを最初に戻す
-        settingMode = false;              // 設定モードを終了する
-        saveSettings();                   // 現在の設定値をEEPROMに保存する関数を呼び出す
-        displayMode();                    // 通常モードの表示に戻す関数を呼び出す
+        currentSetting = 0;         // 設定項目のインデックスを最初に戻す
+        settingMode = false;        // 設定モードを終了する
+        saveSettings();             // 現在の設定値をEEPROMに保存する関数を呼び出す
+        displayMode();              // 通常モードの表示に戻す関数を呼び出す
         Serial.println("設定モードを終了します。");
       } else {
         displaySettings(); // 次の設定項目をOLEDに表示する関数を呼び出す
@@ -391,16 +405,36 @@ void loop() {
 
 void loadSettings() { // EEPROMから設定値を読み込む関数
   for (int i = 0; i < numSettings; i++) { // 設定項目の数だけ繰り返す
-    settings[i] = EEPROM.read(i); // EEPROMのi番地から1バイト読み込み、settings配列のi番目に格納
+    if (i == 11) { // DHTの設定項目の場合
+      // EEPROMの連続した2バイトから値を読み込む
+      settings[i] = EEPROM.read(i) | (EEPROM.read(i + 1) << 8);
+      // 必要であれば、範囲の制限 (0-65535)
+      if (settings[i] < 0) settings[i] = 0;
+      if (settings[i] > 65535) settings[i] = 65535;
+    } else {
+      settings[i] = EEPROM.read(i); // その他の設定項目は1バイト読み込み
+    }
   }
 }
 
 void saveSettings() { // EEPROMに設定値を保存する関数
   Serial.println("EEPROM Saved:"); // シリアルモニタに"EEPROM Saved:"と表示
   for (int i = 0; i < numSettings; i++) { // 設定項目の数だけ繰り返す
-    int oldValue = EEPROM.read(i); // EEPROMのi番地から以前の値を読み込む
+    int oldValue;
+    if (i == 11) {
+      oldValue = EEPROM.read(i) | (EEPROM.read(i + 1) << 8);
+    } else {
+      oldValue = EEPROM.read(i);
+    }
+
     if (oldValue != settings[i]) { // 現在の設定値と以前の値が異なる場合
-      EEPROM.write(i, settings[i]); // EEPROMのi番地に現在の設定値を書き込む
+      if (i == 11) { // DHTの設定項目の場合
+        // 値を2バイトに分割して保存
+        EEPROM.write(i, settings[i] & 0xFF);       // 下位バイト
+        EEPROM.write(i + 1, (settings[i] >> 8) & 0xFF); // 上位バイト
+      } else {
+        EEPROM.write(i, settings[i]); // その他の設定項目は1バイト書き込み
+      }
       Serial.print(settingNames[i]); // シリアルモニタに設定項目名を表示
       Serial.print(":"); // シリアルモニタに":"を表示
       Serial.print(oldValue); // シリアルモニタに以前の値を表示
@@ -423,7 +457,11 @@ void displaySettings() { // 設定モードの画面を表示する関数
   display.setCursor(0, 24); // カーソルの開始位置を(0, 24)に設定
   display.print(settingNames[currentSetting]); // 現在選択されている設定項目名を表示
   display.print(": "); // ":"を表示
-  display.println(settings[currentSetting]); // 現在の設定値を表示
+  if (currentSetting == 11) { // DHTの設定項目の場合
+    display.println(settings[currentSetting]); // 直接表示
+  } else {
+    display.println(settings[currentSetting]); // 現在の設定値を表示
+  }
   display.display(); // OLED画面を更新
 }
 
@@ -437,7 +475,11 @@ void displayValue() { // 数値部分のみを表示する関数
   display.setCursor(0, 24); // カーソルの開始位置を(0, 24)に設定
   display.print(settingNames[currentSetting]); // 現在選択されている設定項目名を表示
   display.print(": "); // ":"を表示
-  display.println(settings[currentSetting]); // 現在の設定値を表示
+  if (currentSetting == 11) { // DHTの設定項目の場合
+    display.println(settings[currentSetting]); // 直接表示
+  } else {
+    display.println(settings[currentSetting]); // 現在の設定値を表示
+  }
   display.display(); // OLED画面を更新
 }
 

@@ -289,46 +289,49 @@ void loop() {
         lastHatState = currentHat;
       }
       
-      // ==================================================
-      // 3. 【最優先】アナログ入力（聖域のdelay）
-      // ==================================================
-      // ここで sendReport することで、上記で予約したデジタルの状態も一緒に送信されます。
+      // --- 3. 太鼓アナログ入力 (ここが最優先) ---
+      
+      // 判定の直前で「最新の時間」を取得！情報の鮮度を100%にします 📈
+      time = millis();
 
-      if (a3 - sv3 >= settings[3] && time - ti3 > swA && time - ti > swB) { // ZL
+      if (a3 - sv3 >= settings[3] && time - ti3 > swA && time - ti > swB) { // ZL (左ドン)
         SwitchControlLibrary().pressButton(Button::ZL);
         SwitchControlLibrary().sendReport();
         delay(cc);
         SwitchControlLibrary().releaseButton(Button::ZL);
         SwitchControlLibrary().sendReport();
         delay(aa);
-        ti3 = millis(); ti = millis();
+        ti3 = millis(); ti = ti3; time = ti3; // ←ここでも時間をリフレッシュ！
       }
-      if (a0 - sv0 >= settings[0] && time - ti0 > swA && time - ti > swB) { // ZR
+      
+      if (a0 - sv0 >= settings[0] && time - ti0 > swA && time - ti > swB) { // ZR (右ドン)
         SwitchControlLibrary().pressButton(Button::ZR);
         SwitchControlLibrary().sendReport();
         delay(cc);
         SwitchControlLibrary().releaseButton(Button::ZR);
         SwitchControlLibrary().sendReport();
         delay(aa);
-        ti0 = millis(); ti = millis();
+        ti0 = millis(); ti = ti0; time = ti0; 
       }
-      if (a1 - sv1 >= settings[1] && time - ti1 > swA && time - ti > swB) { // RCLICK
+      
+      if (a1 - sv1 >= settings[1] && time - ti1 > swA && time - ti > swB) { // RCLICK (右カッ)
         SwitchControlLibrary().pressButton(Button::RCLICK);
         SwitchControlLibrary().sendReport();
         delay(cc);
         SwitchControlLibrary().releaseButton(Button::RCLICK);
         SwitchControlLibrary().sendReport();
         delay(aa);
-        ti1 = millis(); ti = millis();
+        ti1 = millis(); ti = ti1; time = ti1;
       }
-      if (a2 - sv2 >= settings[2] && time - ti2 > swA && time - ti > swB) { // LCLICK
+      
+      if (a2 - sv2 >= settings[2] && time - ti2 > swA && time - ti > swB) { // LCLICK (左カッ)
         SwitchControlLibrary().pressButton(Button::LCLICK);
         SwitchControlLibrary().sendReport();
         delay(cc);
         SwitchControlLibrary().releaseButton(Button::LCLICK);
         SwitchControlLibrary().sendReport();
         delay(aa);
-        ti2 = millis(); ti = millis();
+        ti2 = millis(); ti = ti2; time = ti2;
       }
 
     }
